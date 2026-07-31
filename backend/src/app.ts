@@ -16,12 +16,19 @@ import { prisma } from "./config/prisma";
 const app = express();
 
 // ─── Security & Utilities ─────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(compression());
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: [
+      env.FRONTEND_URL,
+      "http://localhost:3000",
+    ],
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 app.use(express.json({ limit: "1mb" }));
@@ -35,8 +42,8 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: env.NODE_ENV === "production",
-      sameSite: env.NODE_ENV === "production" ? "none" : "lax",
+      secure: true,           // always true — Render is always HTTPS
+      sameSite: "none",       // required for cross-domain cookies (Vercel → Render)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   })
