@@ -3,15 +3,17 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { getToken } from "@/services/api";
 import Spinner from "@/components/ui/Spinner";
-import LoginPage from "./login/page";
+import LoginClient from "./login/LoginClient";
 
 export default function HomeClient() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && user && getToken()) {
+      // Only redirect to dashboard if token is present AND user is loaded
       router.replace("/dashboard");
     }
   }, [user, loading, router]);
@@ -24,7 +26,7 @@ export default function HomeClient() {
     );
   }
 
-  if (user) return null;
+  if (user && getToken()) return null;
 
-  return <LoginPage />;
+  return <LoginClient />;
 }

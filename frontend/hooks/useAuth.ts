@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { authApi, getToken } from "@/services/api";
+import { authApi, getToken, clearToken } from "@/services/api";
 import { User } from "@/types";
 
 interface AuthState {
@@ -41,12 +41,14 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(async () => {
+    // Clear token from localStorage FIRST before any redirect
+    clearToken();
+    setState({ user: null, loading: false, error: null });
     try {
       await authApi.logout();
     } catch {
-      // ignore
+      // ignore — token is already cleared locally
     } finally {
-      setState({ user: null, loading: false, error: null });
       window.location.href = "/";
     }
   }, []);
