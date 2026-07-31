@@ -15,50 +15,39 @@ type Tab = "scheduled" | "sent";
 export default function DashboardClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading, logout, refetch } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("scheduled");
   const [composeOpen, setComposeOpen] = useState(false);
-  // Track whether we're in the middle of processing the OAuth token
-  const [tokenProcessed, setTokenProcessed] = useState(false);
+  const [tokenSaved, setTokenSaved] = useState(false);
+  const processedRef = useRef(false);
 
   const scheduled = useScheduledEmails();
   const sent = useSentEmails();
 
-  // Step 1: Extract and save JWT token from URL on first mount
-  const tokenRef = useRef(false);
+  // Extract and save JWT token from URL — runs only once
   useEffect(() => {
-    if (tokenRef.current) return;
-    tokenRef.current = true;
+    if (processedRef.current) return;
+    processedRef.current = true;
 
     const token = searchParams.get("token");
     if (token) {
-      console.log("🔑 Token found in URL, saving...");
-      // Save token to localStorage BEFORE anything else
       saveToken(token);
-      console.log("🔑 Token saved, fetching user...");
-      // Fetch user with the new token
-      refetch().then(() => {
-        console.log("✅ User fetched, cleaning URL...");
-        // Clean the URL after user is loaded
-        router.replace("/dashboard");
-        setTokenProcessed(true);
-      });
-    } else {
-      console.log("ℹ️ No token in URL, checking existing auth...");
-      setTokenProcessed(true);
+      // Replace URL without the token param — use window.history to avoid re-render
+      window.history.replaceState({}, "", "/dashboard");
     }
+    setTokenSaved(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Step 2: Only redirect to login after token is processed AND user is null
+  // Redirect to login only after token is saved and auth check is done
   useEffect(() => {
-    if (!tokenProcessed) return; // wait for token processing
+    if (!tokenSaved) return;
     if (!authLoading && !user) {
       router.replace("/");
     }
-  }, [user, authLoading, router, tokenProcessed]);
+  }, [user, authLoading, router, tokenSaved]);
 
-  // Fetch data when tab changes
+  // Fetch emails when tab changes
   useEffect(() => {
     if (!user) return;
     if (activeTab === "scheduled") {
@@ -66,7 +55,7 @@ export default function DashboardClient() {
     } else {
       sent.refetch();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, user]);
 
   const handleScheduled = useCallback(() => {
@@ -74,8 +63,7 @@ export default function DashboardClient() {
     setActiveTab("scheduled");
   }, [scheduled]);
 
-  // Show spinner while auth is loading or token is being processed
-  if (authLoading || !tokenProcessed) {
+  if (!tokenSaved || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Spinner size="lg" />
@@ -90,7 +78,6 @@ export default function DashboardClient() {
       <Header user={user} onLogout={logout} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page heading + Compose button */}
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
@@ -109,7 +96,6 @@ export default function DashboardClient() {
           </button>
         </div>
 
-        {/* Tab bar */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex gap-6" aria-label="Email tabs">
             {(["scheduled", "sent"] as Tab[]).map((tab) => (
@@ -134,7 +120,6 @@ export default function DashboardClient() {
           </nav>
         </div>
 
-        {/* Table */}
         {activeTab === "scheduled" ? (
           <EmailTable
             emails={scheduled.emails}

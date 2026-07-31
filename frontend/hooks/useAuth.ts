@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { authApi, getToken } from "@/services/api";
 import { User } from "@/types";
 
@@ -17,37 +17,34 @@ export function useAuth() {
     error: null,
   });
 
+  // Prevent duplicate fetches
+  const fetchingRef = useRef(false);
+
   const fetchUser = useCallback(async () => {
-    // Don't even try if there's no token and no session
-    const token = getToken();
-    if (!token) {
-      // Still try — might have a session cookie in local dev
-      try {
-        const user = await authApi.getMe();
-        setState({ user, loading: false, error: null });
-      } catch {
-        setState({ user: null, loading: false, error: null });
-      }
-      return;
-    }
+    if (fetchingRef.current) return;
+    fetchingRef.current = true;
 
     try {
       const user = await authApi.getMe();
       setState({ user, loading: false, error: null });
     } catch {
       setState({ user: null, loading: false, error: null });
+    } finally {
+      fetchingRef.current = false;
     }
   }, []);
 
   useEffect(() => {
     fetchUser();
-  }, [fetchUser]);
+  // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const logout = useCallback(async () => {
     try {
       await authApi.logout();
     } catch {
-      // ignore logout errors
+      // ignore
     } finally {
       setState({ user: null, loading: false, error: null });
       window.location.href = "/";
