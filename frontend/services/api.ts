@@ -32,6 +32,7 @@ const http: AxiosInstance = axios.create({
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
   timeout: 15000,
+  maxRedirects: 0, // don't follow redirects — preserves Authorization header
 });
 
 // Attach JWT token to every request if available

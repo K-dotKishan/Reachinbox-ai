@@ -32,15 +32,19 @@ export default function DashboardClient() {
 
     const token = searchParams.get("token");
     if (token) {
+      console.log("🔑 Token found in URL, saving...");
       // Save token to localStorage BEFORE anything else
       saveToken(token);
+      console.log("🔑 Token saved, fetching user...");
       // Fetch user with the new token
       refetch().then(() => {
+        console.log("✅ User fetched, cleaning URL...");
         // Clean the URL after user is loaded
         router.replace("/dashboard");
         setTokenProcessed(true);
       });
     } else {
+      console.log("ℹ️ No token in URL, checking existing auth...");
       setTokenProcessed(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
