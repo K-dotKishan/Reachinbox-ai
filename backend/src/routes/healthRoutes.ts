@@ -11,16 +11,16 @@ router.get("/", async (_req: Request, res: Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.postgres = "ok";
-  } catch {
-    checks.postgres = "error";
+  } catch (e) {
+    checks.postgres = e instanceof Error ? e.message : "error";
   }
 
   // Redis
   try {
     await redisConnection.ping();
     checks.redis = "ok";
-  } catch {
-    checks.redis = "error";
+  } catch (e) {
+    checks.redis = e instanceof Error ? e.message : "error";
   }
 
   const allHealthy = Object.values(checks).every((v) => v === "ok");
