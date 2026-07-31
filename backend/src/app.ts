@@ -43,7 +43,10 @@ app.use(
 );
 
 // ─── Passport ─────────────────────────────────────────────────────────────────
+// passport.session() is required so Passport can store the OAuth state
+// parameter between the initial redirect and the callback.
 app.use(passport.initialize());
+app.use(passport.session());
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
