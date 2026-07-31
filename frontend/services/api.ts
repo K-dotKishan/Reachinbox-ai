@@ -4,7 +4,29 @@ import { ApiResponse, Email, User, ComposeFormValues } from "@/types";
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-// Singleton axios instance — sends cookies for session auth
+const TOKEN_KEY = "es_token";
+
+// ─── Token helpers ────────────────────────────────────────────────────────────
+
+export function saveToken(token: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+}
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function clearToken(): void {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+// ─── Axios instance ───────────────────────────────────────────────────────────
+
 const http: AxiosInstance = axios.create({
   baseURL: BASE_URL,
   withCredentials: true,
@@ -12,15 +34,23 @@ const http: AxiosInstance = axios.create({
   timeout: 15000,
 });
 
-// ─── Response interceptor ─────────────────────────────────────────────────────
+// Attach JWT token to every request if available
+http.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// On 401, clear token and redirect to login (but not if already there)
 http.interceptors.response.use(
   (res) => res,
   (err: AxiosError) => {
-    // Only redirect on 401 if we're NOT already on the login/home page
-    // to prevent infinite redirect loops
     if (err.response?.status === 401 && typeof window !== "undefined") {
       const path = window.location.pathname;
       if (path !== "/" && path !== "/login") {
+        clearToken();
         window.location.href = "/";
       }
     }
@@ -46,6 +76,7 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     await http.post("/api/auth/logout");
+    clearToken();
   },
 
   getGoogleLoginUrl: (): string => `${BASE_URL}/api/auth/google`,
@@ -97,13 +128,10 @@ const EMAIL_REGEX = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
 
 export function extractEmailsFromText(text: string): string[] {
   const matches = text.match(EMAIL_REGEX) ?? [];
-  // Deduplicate and lowercase
   return [...new Set(matches.map((e) => e.toLowerCase()))];
 }
 
-export function composeFormToPayload(
-  form: ComposeFormValues
-): SchedulePayload {
+export function composeFormToPayload(form: ComposeFormValues): SchedulePayload {
   return {
     recipients: form.recipients,
     subject: form.subject,

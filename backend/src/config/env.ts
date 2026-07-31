@@ -20,6 +20,7 @@ const envSchema = z.object({
   EMAIL_DELAY_MS: z.coerce.number().nonnegative().default(2000),
 
   SESSION_SECRET: z.string().min(16),
+  JWT_SECRET: z.string().min(16).default("jwt-secret-change-in-production"),
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   FRONTEND_URL: z.string().min(1).default("http://localhost:3000"),

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { sendSuccess, sendError } from "../utils/response";
+import { signToken } from "../utils/jwt";
 import { env } from "../config/env";
 import { SessionUser } from "../types";
 
@@ -23,8 +24,14 @@ export function logout(req: Request, res: Response): void {
 }
 
 export function googleCallback(req: Request, res: Response): void {
-  // Passport puts the user on req.user after successful OAuth
   const user = req.user as SessionUser;
+
+  // Store in session (for same-domain use)
   req.session.user = user;
-  res.redirect(`${env.FRONTEND_URL}/dashboard`);
+
+  // Also issue a JWT and pass it in the redirect URL
+  // This solves cross-domain cookie issues (Vercel frontend + Render backend)
+  const token = signToken(user);
+
+  res.redirect(`${env.FRONTEND_URL}/dashboard?token=${token}`);
 }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useScheduledEmails, useSentEmails } from "@/hooks/useEmails";
+import { saveToken } from "@/services/api";
 import Header from "@/components/Header";
 import EmailTable from "@/components/EmailTable";
 import ComposeModal from "@/components/ComposeModal";
@@ -13,12 +14,25 @@ type Tab = "scheduled" | "sent";
 
 export default function DashboardClient() {
   const router = useRouter();
-  const { user, loading: authLoading, logout } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading, logout, refetch } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("scheduled");
   const [composeOpen, setComposeOpen] = useState(false);
 
   const scheduled = useScheduledEmails();
   const sent = useSentEmails();
+
+  // Extract JWT token from URL after Google OAuth redirect
+  useEffect(() => {
+    const token = searchParams.get("token");
+    if (token) {
+      saveToken(token);
+      // Remove token from URL without page reload
+      router.replace("/dashboard");
+      // Refetch user with the new token
+      refetch();
+    }
+  }, [searchParams, router, refetch]);
 
   // Guard — redirect to login if not authenticated
   useEffect(() => {
