@@ -16,9 +16,11 @@ const http: AxiosInstance = axios.create({
 http.interceptors.response.use(
   (res) => res,
   (err: AxiosError) => {
-    if (err.response?.status === 401) {
-      // Session expired — redirect to login
-      if (typeof window !== "undefined") {
+    // Only redirect on 401 if we're NOT already on the login/home page
+    // to prevent infinite redirect loops
+    if (err.response?.status === 401 && typeof window !== "undefined") {
+      const path = window.location.pathname;
+      if (path !== "/" && path !== "/login") {
         window.location.href = "/";
       }
     }
