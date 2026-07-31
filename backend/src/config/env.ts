@@ -25,6 +25,7 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().min(1).default("http://localhost:3000"),
 });
 
+// Validate and exit immediately on failure — env is always defined after this
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
@@ -33,4 +34,5 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+// Non-nullable export — TypeScript knows this is always defined
+export const env: z.infer<typeof envSchema> = parsed.data;
