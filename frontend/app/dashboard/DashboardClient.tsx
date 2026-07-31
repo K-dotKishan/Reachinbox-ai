@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useScheduledEmails, useSentEmails } from "@/hooks/useEmails";
@@ -18,30 +18,43 @@ export default function DashboardClient() {
   const { user, loading: authLoading, logout, refetch } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("scheduled");
   const [composeOpen, setComposeOpen] = useState(false);
+  // Track whether we're in the middle of processing the OAuth token
+  const [tokenProcessed, setTokenProcessed] = useState(false);
 
   const scheduled = useScheduledEmails();
   const sent = useSentEmails();
 
-  // Extract JWT token from URL after Google OAuth redirect
+  // Step 1: Extract and save JWT token from URL on first mount
+  const tokenRef = useRef(false);
   useEffect(() => {
+    if (tokenRef.current) return;
+    tokenRef.current = true;
+
     const token = searchParams.get("token");
     if (token) {
+      // Save token to localStorage BEFORE anything else
       saveToken(token);
-      // Remove token from URL without page reload
-      router.replace("/dashboard");
-      // Refetch user with the new token
-      refetch();
+      // Fetch user with the new token
+      refetch().then(() => {
+        // Clean the URL after user is loaded
+        router.replace("/dashboard");
+        setTokenProcessed(true);
+      });
+    } else {
+      setTokenProcessed(true);
     }
-  }, [searchParams, router, refetch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Guard — redirect to login if not authenticated
+  // Step 2: Only redirect to login after token is processed AND user is null
   useEffect(() => {
+    if (!tokenProcessed) return; // wait for token processing
     if (!authLoading && !user) {
       router.replace("/");
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, tokenProcessed]);
 
-  // Fetch data when tab changes or user loads
+  // Fetch data when tab changes
   useEffect(() => {
     if (!user) return;
     if (activeTab === "scheduled") {
@@ -57,7 +70,8 @@ export default function DashboardClient() {
     setActiveTab("scheduled");
   }, [scheduled]);
 
-  if (authLoading) {
+  // Show spinner while auth is loading or token is being processed
+  if (authLoading || !tokenProcessed) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Spinner size="lg" />
@@ -72,7 +86,6 @@ export default function DashboardClient() {
       <Header user={user} onLogout={logout} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
         {/* Page heading + Compose button */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -85,13 +98,7 @@ export default function DashboardClient() {
             onClick={() => setComposeOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors shadow-sm"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Compose Email
@@ -143,7 +150,6 @@ export default function DashboardClient() {
         )}
       </main>
 
-      {/* Compose modal */}
       <ComposeModal
         isOpen={composeOpen}
         onClose={() => setComposeOpen(false)}
