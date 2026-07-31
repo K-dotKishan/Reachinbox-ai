@@ -12,7 +12,7 @@ export function getCurrentUser(req: Request, res: Response): void {
 }
 
 export function logout(req: Request, res: Response): void {
-  req.session.destroy((err) => {
+  req.session.destroy((err: unknown) => {
     if (err) {
       sendError(res, "Logout failed", 500);
       return;
