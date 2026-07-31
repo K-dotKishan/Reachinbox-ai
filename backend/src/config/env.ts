@@ -4,12 +4,13 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const envSchema = z.object({
-  DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
+  DATABASE_URL: z.string().min(1),
+  DIRECT_URL: z.string().min(1).optional(),
+  REDIS_URL: z.string().min(1),
 
   GOOGLE_CLIENT_ID: z.string().min(1),
   GOOGLE_CLIENT_SECRET: z.string().min(1),
-  GOOGLE_CALLBACK_URL: z.string().url(),
+  GOOGLE_CALLBACK_URL: z.string().min(1),
 
   ETHEREAL_USER: z.string().min(1),
   ETHEREAL_PASS: z.string().min(1),
@@ -21,7 +22,7 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(16),
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+  FRONTEND_URL: z.string().min(1).default("http://localhost:3000"),
 });
 
 const parsed = envSchema.safeParse(process.env);
