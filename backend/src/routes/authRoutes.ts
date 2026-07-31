@@ -6,11 +6,12 @@ import { requireAuth } from "../middleware/auth";
 const router = Router();
 
 // Redirect to Google consent screen
+// NOTE: Do NOT pass session:false here — Passport needs to store the
+// OAuth state cookie during the redirect round-trip to prevent CSRF.
 router.get(
   "/google",
   passport.authenticate("google", {
     scope: ["profile", "email"],
-    session: false, // we manage session manually
   })
 );
 
@@ -19,7 +20,6 @@ router.get(
   "/google/callback",
   passport.authenticate("google", {
     failureRedirect: "/api/auth/failure",
-    session: false,
   }),
   googleCallback
 );
