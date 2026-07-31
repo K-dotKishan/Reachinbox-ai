@@ -15,10 +15,13 @@ router.get("/", async (_req: Request, res: Response) => {
     checks.postgres = e instanceof Error ? e.message : "error";
   }
 
-  // Redis
+  // Redis — reconnect if closed before pinging
   try {
-    await redisConnection.ping();
-    checks.redis = "ok";
+    if (redisConnection.status === "end" || redisConnection.status === "close") {
+      await redisConnection.connect();
+    }
+    const pong = await redisConnection.ping();
+    checks.redis = pong === "PONG" ? "ok" : `unexpected: ${pong}`;
   } catch (e) {
     checks.redis = e instanceof Error ? e.message : "error";
   }
